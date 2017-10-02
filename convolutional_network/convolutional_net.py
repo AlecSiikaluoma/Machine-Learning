@@ -71,10 +71,8 @@ def forward(X, y, weights, model, reg=0.1):
 
     cost = -np.log(scores[y])
 
-
-    sum_loss = cost + 0.5 * np.sum([np.sum(np.square(weights["W%d" % i])) for i in xrange(1, len(model) + 1)]) * reg
-    sum_loss = cost + sum_loss
-
+    sum_loss = cost + (0.5 * np.sum([np.sum(np.square(weights["W%d" % i])) for i in xrange(1, len(model) + 1)]) * reg)
+    
     return scores, cache, sum_loss
 
 def backward(x, y, scores, cache, weights, hyper_parameters, model):
@@ -93,7 +91,9 @@ def backward(x, y, scores, cache, weights, hyper_parameters, model):
         if model[i]["type"] == "convolution":
 
             if model[i+1]["type"] == "fully_connected":
-                delta = delta.reshape(model[i]["filter_number"], 14, 14)
+                ww = cache["layer_%d" % layer][-1].shape[1]
+                hh = cache["layer_%d" % layer][-1].shape[2]
+                delta = delta.reshape(model[i]["filter_number"], hh, ww)
 
             delta_max = max_pool_backward(delta, cache["layer_%d" % layer][1])
             delta_sig = relu_backwards(delta_max, cache["layer_%d" % layer][0])
@@ -152,7 +152,7 @@ def validate(data, weights, model):
 
 
 
-def train(model, training_data, epochs, weights, hyper_parameters):
+def train(model, training_data, epochs, weights, hyper_parameters, test_data):
 
     reg = hyper_parameters["regularization"]
     batch_size = hyper_parameters["batch_size"]
@@ -193,6 +193,8 @@ def train(model, training_data, epochs, weights, hyper_parameters):
 
                 batch_loss += loss
 
+            batch_loss = batch_loss / batch_size
+
             epoch_losses += batch_loss
             batch_number += 1
 
@@ -202,7 +204,7 @@ def train(model, training_data, epochs, weights, hyper_parameters):
 
         print 'loss: %f' % (epoch_losses / batch_number)
 
-    print validate(training_data, weights, model)
+    print validate(test_data, weights, model)
 
 
     return weights
